@@ -1,7 +1,9 @@
 use thiserror::Error;
 
 const DEFAULT_SUMMARY: &str = "Revise os campos destacados e tente novamente.";
+const DUPLICATE_CPF_CNPJ_SUMMARY: &str = "Ja existe um cadastro com este CPF / CNPJ.";
 const KNOWN_FIELDS: &[&str] = &[
+    "aniversario",
     "cpf_cnpj",
     "fantasia",
     "telefones",
@@ -25,6 +27,13 @@ impl CadUnicoFormError {
         Self {
             summary: DEFAULT_SUMMARY,
             invalid_fields,
+        }
+    }
+
+    pub fn duplicate_cpf_cnpj() -> Self {
+        Self {
+            summary: DUPLICATE_CPF_CNPJ_SUMMARY,
+            invalid_fields: vec!["cpf_cnpj"],
         }
     }
 
