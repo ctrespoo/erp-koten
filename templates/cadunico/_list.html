@@ -1,0 +1,69 @@
+<section class="cadunico-list-region" id="cadunico-list-region" data-list-region tabindex="0">
+  {% if page.items.is_empty() %}
+  <div class="list-empty" data-list-empty>
+    <h2>Nenhum cadastro encontrado</h2>
+    <p>Ajuste a busca ou crie um novo cadastro.</p>
+  </div>
+  {% else %}
+  <div class="cadunico-list-table">
+    <table>
+      <thead>
+        <tr>
+          <th>Fantasia</th>
+          <th>CPF/CNPJ</th>
+          <th>Cidade</th>
+          <th>Acoes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in page.items %}
+        <tr data-row data-row-id="{{ item.id }}" tabindex="-1">
+          <td>{{ item.fantasia }}</td>
+          <td>{{ item.cpf_cnpj }}</td>
+          <td>{{ item.cidade }}/{{ item.uf }}</td>
+          <td class="cadunico-list-actions">
+            <div class="row-menu" data-row-menu hidden>
+              <button type="button" disabled aria-disabled="true">Editar (em breve)</button>
+              <button type="button" data-row-delete data-row-name="{{ item.fantasia }}">Excluir</button>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+  <footer class="list-pagination">
+    <button
+      type="button"
+      data-page-prev
+      name="before"
+      hx-get="/cadunico/lista"
+      hx-target="#cadunico-list-region"
+      hx-swap="outerHTML"
+      hx-include="#cadunico-search"
+      {% match page.prev_cursor %}
+      {% when Some with (cursor) %}data-page-prev-cursor="{{ cursor }}" value="{{ cursor }}"
+      {% when None %}disabled
+      {% endmatch %}
+    >
+      Anterior
+    </button>
+    <button
+      type="button"
+      data-page-next
+      name="after"
+      hx-get="/cadunico/lista"
+      hx-target="#cadunico-list-region"
+      hx-swap="outerHTML"
+      hx-include="#cadunico-search"
+      {% match page.next_cursor %}
+      {% when Some with (cursor) %}data-page-next-cursor="{{ cursor }}" value="{{ cursor }}"
+      {% when None %}disabled
+      {% endmatch %}
+    >
+      Proxima
+    </button>
+  </footer>
+  {% include "cadunico/_delete_dialog.html" %}
+</section>

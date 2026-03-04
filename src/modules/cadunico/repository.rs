@@ -4,6 +4,27 @@ use super::forms::CadUnicoFormData;
 
 pub struct CadUnicoRepository;
 
+pub struct CadUnicoListQuery {
+    pub search: Option<String>,
+    pub before: Option<i64>,
+    pub after: Option<i64>,
+    pub page_size: i64,
+}
+
+pub struct CadUnicoListPage {
+    pub items: Vec<CadUnicoListItem>,
+    pub next_cursor: Option<i64>,
+    pub prev_cursor: Option<i64>,
+}
+
+pub struct CadUnicoListItem {
+    pub id: i64,
+    pub cpf_cnpj: String,
+    pub fantasia: String,
+    pub cidade: String,
+    pub uf: String,
+}
+
 impl CadUnicoRepository {
     pub async fn insert(
         pool: &sqlx::PgPool,
@@ -100,6 +121,116 @@ impl CadUnicoRepository {
             }
             other => CadUnicoRepositoryError::Database(other),
         })
+    }
+
+    pub async fn list(
+        pool: &sqlx::PgPool,
+        query: &CadUnicoListQuery,
+    ) -> Result<CadUnicoListPage, CadUnicoRepositoryError> {
+        let search = query.search.as_deref().unwrap_or("");
+        let search_pattern = format!("%{search}%");
+        let page_limit = query.page_size + 1;
+
+        if let Some(after) = query.after {
+            let mut rows = sqlx::query_as::<_, (i64, String, String, String, String)>(
+                r#"
+                SELECT id, cpf_cnpj, fantasia, cidade, uf
+                FROM cadunico
+                WHERE (
+                    $1 = ''
+                    OR cpf_cnpj ILIKE $2
+                    OR fantasia ILIKE $2
+                    OR cidade ILIKE $2
+                )
+                AND id > $3
+                ORDER BY id ASC
+                LIMIT $4
+                "#,
+            )
+            .bind(search)
+            .bind(&search_pattern)
+            .bind(after)
+            .bind(page_limit)
+            .fetch_all(pool)
+            .await?;
+
+            let has_newer_rows = rows.len() as i64 > query.page_size;
+            if has_newer_rows {
+                rows.pop();
+            }
+
+            rows.reverse();
+
+            let items: Vec<_> = rows.into_iter().map(CadUnicoListItem::from).collect();
+            let next_cursor = items.last().map(|item| item.id);
+            let prev_cursor = has_newer_rows.then(|| items.first().map(|item| item.id)).flatten();
+
+            return Ok(CadUnicoListPage {
+                items,
+                next_cursor,
+                prev_cursor,
+            });
+        }
+
+        let mut rows = sqlx::query_as::<_, (i64, String, String, String, String)>(
+            r#"
+            SELECT id, cpf_cnpj, fantasia, cidade, uf
+            FROM cadunico
+            WHERE (
+                $1 = ''
+                OR cpf_cnpj ILIKE $2
+                OR fantasia ILIKE $2
+                OR cidade ILIKE $2
+            )
+            AND ($3::bigint IS NULL OR id < $3)
+            ORDER BY id DESC
+            LIMIT $4
+            "#,
+        )
+        .bind(search)
+        .bind(&search_pattern)
+        .bind(query.before)
+        .bind(page_limit)
+        .fetch_all(pool)
+        .await?;
+
+        let has_older_rows = rows.len() as i64 > query.page_size;
+        if has_older_rows {
+            rows.pop();
+        }
+
+        let items: Vec<_> = rows.into_iter().map(CadUnicoListItem::from).collect();
+        let next_cursor = has_older_rows
+            .then(|| items.last().map(|item| item.id))
+            .flatten();
+        let prev_cursor = query.before.and_then(|_| items.first().map(|item| item.id));
+
+        Ok(CadUnicoListPage {
+            items,
+            next_cursor,
+            prev_cursor,
+        })
+    }
+
+    pub async fn delete(pool: &sqlx::PgPool, id: i64) -> Result<(), CadUnicoRepositoryError> {
+        sqlx::query("DELETE FROM cadunico WHERE id = $1")
+            .bind(id)
+            .execute(pool)
+            .await
+            .map(|_| ())
+            .map_err(CadUnicoRepositoryError::from)
+    }
+}
+
+impl From<(i64, String, String, String, String)> for CadUnicoListItem {
+    fn from(row: (i64, String, String, String, String)) -> Self {
+        Self {
+            id: row.0,
+            cpf_cnpj: row.1,
+            fantasia: row.2,
+            cidade: row.3,
+            uf: row.4,
+        }
     }
 }
 

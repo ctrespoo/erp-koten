@@ -3,14 +3,38 @@
 {% block title %}Cadastro Unico{% endblock %}
 
 {% block body %}
-<main class="shell shell--narrow">
-  <header class="page-header">
-    <p class="eyebrow">Modulo interno</p>
-    <h1>Cadastro Unico</h1>
-    <p class="lede">
-      Centralize o primeiro recorte do cadastro antes de conectar persistencia e regras fiscais.
+<main class="shell shell--wide cadunico-list-page" data-cadunico-list-root>
+  <header class="page-header page-header--list">
+    <div class="page-header__heading">
+      <p class="eyebrow">Cadastro Unico</p>
+      <h1>{{ page.heading }}</h1>
+      <p class="page-header__summary">
+        Console operacional para busca rapida, navegacao por teclado e paginação incremental.
+      </p>
+    </div>
+    <p class="shortcut-help shortcut-help--inline">
+      Ctrl+K busca. Ctrl+N cria. Setas verticais navegam linhas. Setas horizontais trocam paginas.
     </p>
-    <a class="primary-link" href="/cadunico/criar">Criar cadastro</a>
   </header>
+  <section class="cadunico-list-toolbar" aria-label="Ferramentas da lista">
+    <label class="field" for="cadunico-search">
+      <span class="field__label">Busca</span>
+      <input
+        id="cadunico-search"
+        name="q"
+        type="search"
+        value="{{ page.search_value }}"
+        placeholder="CPF, fantasia ou cidade"
+        autocomplete="off"
+        hx-get="/cadunico/lista"
+        hx-trigger="input changed delay:250ms, search"
+        hx-target="#cadunico-list-region"
+        hx-swap="outerHTML"
+      />
+    </label>
+    <a class="primary-link" href="/cadunico/criar" data-create-link>Novo cadastro</a>
+  </section>
+  {% include "cadunico/_list.html" %}
 </main>
+<script type="module" src="/assets/scripts/cadunico-list.js"></script>
 {% endblock %}

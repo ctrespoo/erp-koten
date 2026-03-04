@@ -93,6 +93,42 @@ async fn reset_cadunico_table(pool: &PgPool) {
         .expect("cadunico cleanup should succeed");
 }
 
+async fn insert_cadunico(
+    pool: &PgPool,
+    cpf_cnpj: &str,
+    fantasia: &str,
+    cidade: &str,
+    uf: &str,
+) -> i64 {
+    sqlx::query_scalar(
+        r#"
+        INSERT INTO cadunico (
+            cpf_cnpj,
+            fantasia,
+            cep,
+            endereco,
+            bairro,
+            cidade,
+            uf,
+            codigo_ibge
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        RETURNING id
+        "#,
+    )
+    .bind(cpf_cnpj)
+    .bind(fantasia)
+    .bind("01001000")
+    .bind("Rua A")
+    .bind("Centro")
+    .bind(cidade)
+    .bind(uf)
+    .bind("3550308")
+    .fetch_one(pool)
+    .await
+    .expect("seed insert should succeed")
+}
+
 #[tokio::test]
 async fn get_cadunico_index_should_return_ok() {
     let app = test_app();
@@ -147,6 +183,192 @@ async fn get_cadunico_index_should_render_html_layout() {
     assert!(html.contains("Cadastro Unico"));
     assert!(html.contains("/assets/styles/app.css"));
     assert!(html.contains("/cadunico/criar"));
+}
+
+#[tokio::test]
+async fn get_cadunico_index_should_render_keyboard_list_shell() {
+    let app = test_app();
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/cadunico")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let html = String::from_utf8(body.to_vec()).unwrap();
+
+    assert!(html.contains("data-cadunico-list-root"));
+    assert!(html.contains("Ctrl+K"));
+    assert!(html.contains("Ctrl+N"));
+    assert!(html.contains("id=\"cadunico-search\""));
+    assert!(html.contains("id=\"cadunico-list-region\""));
+}
+
+#[tokio::test]
+async fn get_cadunico_list_fragment_should_render_empty_state_when_table_is_empty() {
+    let database = test_database().await;
+    let app = build_app(AppState::new(database.pool.clone()));
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/cadunico/lista")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let html = String::from_utf8(body.to_vec()).unwrap();
+
+    assert!(html.contains("Nenhum cadastro encontrado"));
+    assert!(html.contains("data-list-empty"));
+    assert!(html.contains("data-page-next"));
+    assert!(html.contains("data-page-prev"));
+}
+
+#[tokio::test]
+async fn get_cadunico_list_fragment_should_filter_by_query_across_fantasia_and_cidade() {
+    let database = test_database().await;
+    insert_cadunico(&database.pool, "10000000001", "Mercado Porto Azul", "Curitiba", "PR").await;
+    insert_cadunico(&database.pool, "10000000002", "Padaria Aurora", "Porto Alegre", "RS").await;
+    insert_cadunico(&database.pool, "10000000003", "Auto Center Horizonte", "Recife", "PE").await;
+    let app = build_app(AppState::new(database.pool.clone()));
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/cadunico/lista?q=porto&page_size=10")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let html = String::from_utf8(body.to_vec()).unwrap();
+
+    assert!(html.contains("Mercado Porto Azul"));
+    assert!(html.contains("Padaria Aurora"));
+    assert!(!html.contains("Auto Center Horizonte"));
+}
+
+#[tokio::test]
+async fn get_cadunico_list_fragment_should_render_next_cursor_when_more_rows_exist() {
+    let database = test_database().await;
+    insert_cadunico(&database.pool, "10000000001", "Registro 1", "Cidade 1", "SP").await;
+    insert_cadunico(&database.pool, "10000000002", "Registro 2", "Cidade 2", "SP").await;
+    insert_cadunico(&database.pool, "10000000003", "Registro 3", "Cidade 3", "SP").await;
+    insert_cadunico(&database.pool, "10000000004", "Registro 4", "Cidade 4", "SP").await;
+    let app = build_app(AppState::new(database.pool.clone()));
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/cadunico/lista?page_size=2")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let html = String::from_utf8(body.to_vec()).unwrap();
+
+    assert!(html.contains("Registro 4"));
+    assert!(html.contains("Registro 3"));
+    assert!(!html.contains("Registro 2"));
+    assert!(html.contains("data-page-next-cursor=\"3\""));
+}
+
+#[tokio::test]
+async fn get_cadunico_list_fragment_should_render_previous_cursor_when_loading_newer_rows() {
+    let database = test_database().await;
+    insert_cadunico(&database.pool, "10000000001", "Registro 1", "Cidade 1", "SP").await;
+    insert_cadunico(&database.pool, "10000000002", "Registro 2", "Cidade 2", "SP").await;
+    insert_cadunico(&database.pool, "10000000003", "Registro 3", "Cidade 3", "SP").await;
+    insert_cadunico(&database.pool, "10000000004", "Registro 4", "Cidade 4", "SP").await;
+    insert_cadunico(&database.pool, "10000000005", "Registro 5", "Cidade 5", "SP").await;
+    let app = build_app(AppState::new(database.pool.clone()));
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/cadunico/lista?after=2&page_size=2")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let html = String::from_utf8(body.to_vec()).unwrap();
+
+    assert!(html.contains("Registro 4"));
+    assert!(html.contains("Registro 3"));
+    assert!(!html.contains("Registro 5"));
+    assert!(html.contains("data-page-prev-cursor=\"4\""));
+}
+
+#[tokio::test]
+async fn delete_cadunico_should_remove_the_selected_record_and_refresh_the_fragment() {
+    let database = test_database().await;
+    let id = insert_cadunico(&database.pool, "10000000001", "Registro 1", "Cidade 1", "SP").await;
+    let app = build_app(AppState::new(database.pool.clone()));
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("DELETE")
+                .uri(format!("/cadunico/{id}"))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let html = String::from_utf8(body.to_vec()).unwrap();
+    assert!(html.contains("Nenhum cadastro encontrado"));
+
+    let remaining: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM cadunico")
+        .fetch_one(&database.pool)
+        .await
+        .expect("count query should succeed");
+    assert_eq!(remaining, 0);
+}
+
+#[tokio::test]
+async fn get_cadunico_list_fragment_should_render_edit_and_delete_actions_for_each_row() {
+    let database = test_database().await;
+    insert_cadunico(&database.pool, "10000000001", "Registro 1", "Cidade 1", "SP").await;
+    let app = build_app(AppState::new(database.pool.clone()));
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/cadunico/lista")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let html = String::from_utf8(body.to_vec()).unwrap();
+
+    assert!(html.contains("Editar (em breve)"));
+    assert!(html.contains("Excluir"));
+    assert!(html.contains("data-row-menu"));
+    assert!(html.contains("data-delete-dialog"));
 }
 
 #[tokio::test]

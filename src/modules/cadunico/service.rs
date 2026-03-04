@@ -1,13 +1,25 @@
 pub use super::forms::CadUnicoFormInput;
 
+use serde::Deserialize;
 use sqlx::PgPool;
 use thiserror::Error;
 
 use super::errors::CadUnicoFormError;
 use super::forms::CadUnicoFormData;
-use super::repository::{CadUnicoRepository, CadUnicoRepositoryError};
+use super::repository::{
+    CadUnicoListPage, CadUnicoListQuery, CadUnicoRepository, CadUnicoRepositoryError,
+};
 
 pub struct CadUnicoService;
+
+#[derive(Debug, Default, Deserialize)]
+pub struct CadUnicoListInput {
+    #[serde(default, rename = "q")]
+    pub search: Option<String>,
+    pub before: Option<i64>,
+    pub after: Option<i64>,
+    pub page_size: Option<i64>,
+}
 
 impl CadUnicoService {
     pub async fn create(
@@ -22,6 +34,38 @@ impl CadUnicoService {
                 CadUnicoRepositoryError::DuplicateCpfCnpj => {
                     CadUnicoServiceError::Form(CadUnicoFormError::duplicate_cpf_cnpj())
                 }
+                CadUnicoRepositoryError::Database(error) => CadUnicoServiceError::Unexpected(error),
+            })
+    }
+
+    pub async fn list(
+        pool: &PgPool,
+        input: CadUnicoListInput,
+    ) -> Result<CadUnicoListPage, CadUnicoServiceError> {
+        let normalized = CadUnicoListQuery {
+            search: normalized_search(input.search),
+            before: input.after.map(|_| None).unwrap_or(input.before),
+            after: input.after,
+            page_size: normalized_page_size(input.page_size),
+        };
+
+        CadUnicoRepository::list(pool, &normalized)
+            .await
+            .map_err(|error| match error {
+                CadUnicoRepositoryError::DuplicateCpfCnpj => unreachable!(
+                    "list queries should not surface duplicate cpf_cnpj errors"
+                ),
+                CadUnicoRepositoryError::Database(error) => CadUnicoServiceError::Unexpected(error),
+            })
+    }
+
+    pub async fn delete(pool: &PgPool, id: i64) -> Result<(), CadUnicoServiceError> {
+        CadUnicoRepository::delete(pool, id)
+            .await
+            .map_err(|error| match error {
+                CadUnicoRepositoryError::DuplicateCpfCnpj => unreachable!(
+                    "delete queries should not surface duplicate cpf_cnpj errors"
+                ),
                 CadUnicoRepositoryError::Database(error) => CadUnicoServiceError::Unexpected(error),
             })
     }
@@ -61,6 +105,16 @@ impl CadUnicoService {
 
         Ok(normalized)
     }
+}
+
+fn normalized_search(value: Option<String>) -> Option<String> {
+    value
+        .map(|value| value.trim().to_owned())
+        .filter(|value| !value.is_empty())
+}
+
+fn normalized_page_size(value: Option<i64>) -> i64 {
+    value.unwrap_or(20).clamp(1, 100)
 }
 
 #[derive(Debug, Error)]

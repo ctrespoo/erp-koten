@@ -1,6 +1,6 @@
 use askama::Template;
 use axum::{
-    extract::State,
+    extract::{Path, Query, State},
     http::StatusCode,
     http::{HeaderMap, HeaderValue},
     response::{Html, IntoResponse, Response},
@@ -11,8 +11,11 @@ use crate::state::AppState;
 use super::{
     errors::CadUnicoFormError,
     forms::CadUnicoFormInput,
-    service::{CadUnicoService, CadUnicoServiceError},
-    templates::{CadUnicoCreateTemplate, CadUnicoErrorModalTemplate, CadUnicoIndexTemplate, TABS},
+    service::{CadUnicoListInput, CadUnicoService, CadUnicoServiceError},
+    templates::{
+        CadUnicoCreateTemplate, CadUnicoErrorModalTemplate, CadUnicoIndexTemplate,
+        CadUnicoListItemView, CadUnicoListPageView, CadUnicoListPartialTemplate, TABS,
+    },
 };
 
 fn render_html<T>(template: &T) -> Result<Html<String>, StatusCode>
@@ -30,7 +33,9 @@ pub async fn home() -> Html<&'static str> {
 }
 
 pub async fn index() -> Response {
-    match render_html(&CadUnicoIndexTemplate) {
+    let page = CadUnicoListPageView::empty();
+
+    match render_html(&CadUnicoIndexTemplate { page: &page }) {
         Ok(html) => html.into_response(),
         Err(status) => status.into_response(),
     }
@@ -38,6 +43,54 @@ pub async fn index() -> Response {
 
 pub async fn create() -> Response {
     match render_html(&CadUnicoCreateTemplate { tabs: TABS }) {
+        Ok(html) => html.into_response(),
+        Err(status) => status.into_response(),
+    }
+}
+
+pub async fn list_fragment(
+    State(state): State<AppState>,
+    Query(query): Query<CadUnicoListInput>,
+) -> Response {
+    let page = match CadUnicoService::list(&state.db, query).await {
+        Ok(page) => map_list_page(page),
+        Err(CadUnicoServiceError::Unexpected(_)) => {
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+        Err(CadUnicoServiceError::Form(_)) => {
+            return StatusCode::BAD_REQUEST.into_response();
+        }
+    };
+
+    match render_html(&CadUnicoListPartialTemplate { page: &page }) {
+        Ok(html) => html.into_response(),
+        Err(status) => status.into_response(),
+    }
+}
+
+pub async fn destroy(
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+    Query(query): Query<CadUnicoListInput>,
+) -> Response {
+    if let Err(error) = CadUnicoService::delete(&state.db, id).await {
+        return match error {
+            CadUnicoServiceError::Form(_) => StatusCode::BAD_REQUEST.into_response(),
+            CadUnicoServiceError::Unexpected(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        };
+    }
+
+    let page = match CadUnicoService::list(&state.db, query).await {
+        Ok(page) => map_list_page(page),
+        Err(CadUnicoServiceError::Unexpected(_)) => {
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+        Err(CadUnicoServiceError::Form(_)) => {
+            return StatusCode::BAD_REQUEST.into_response();
+        }
+    };
+
+    match render_html(&CadUnicoListPartialTemplate { page: &page }) {
         Ok(html) => html.into_response(),
         Err(status) => status.into_response(),
     }
@@ -71,5 +124,25 @@ pub async fn submit(State(state): State<AppState>, body: String) -> Response {
         Err(CadUnicoServiceError::Unexpected(_)) => {
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
         }
+    }
+}
+
+fn map_list_page(page: super::repository::CadUnicoListPage) -> CadUnicoListPageView {
+    CadUnicoListPageView {
+        heading: "Cadastros",
+        search_value: String::new(),
+        items: page
+            .items
+            .into_iter()
+            .map(|item| CadUnicoListItemView {
+                id: item.id,
+                cpf_cnpj: item.cpf_cnpj,
+                fantasia: item.fantasia,
+                cidade: item.cidade,
+                uf: item.uf,
+            })
+            .collect(),
+        next_cursor: page.next_cursor,
+        prev_cursor: page.prev_cursor,
     }
 }
