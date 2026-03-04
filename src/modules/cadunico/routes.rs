@@ -4,7 +4,7 @@ use axum::{
     response::{Html, IntoResponse, Response},
 };
 
-use super::templates::CadUnicoIndexTemplate;
+use super::templates::{CadUnicoCreateTemplate, CadUnicoIndexTemplate, TABS};
 
 fn render_html<T>(template: &T) -> Result<Html<String>, StatusCode>
 where
@@ -27,6 +27,9 @@ pub async fn index() -> Response {
     }
 }
 
-pub async fn create() -> Html<&'static str> {
-    Html("<h1>Novo Cadastro Unico</h1>")
+pub async fn create() -> Response {
+    match render_html(&CadUnicoCreateTemplate { tabs: TABS }) {
+        Ok(html) => html.into_response(),
+        Err(status) => status.into_response(),
+    }
 }
