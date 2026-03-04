@@ -1,0 +1,22 @@
+{
+    "name": "erp-koten",
+    "module": "index.ts",
+    "type": "module",
+    "private": true,
+    "scripts": {
+        "lint": "oxlint",
+        "lint:fix": "oxlint --fix",
+        "fmt": "oxfmt",
+        "fmt:check": "oxfmt --check",
+        "test": "vitest"
+    },
+    "devDependencies": {
+        "@types/bun": "latest",
+        "oxfmt": "^0.36.0",
+        "oxlint": "^1.51.0",
+        "vitest": "^4.0.18"
+    },
+    "peerDependencies": {
+        "typescript": "^5"
+    }
+}
