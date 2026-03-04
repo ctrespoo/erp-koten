@@ -206,5 +206,7 @@ async fn post_cadunico_should_return_modal_fragment_when_payload_is_invalid() {
 
     assert!(html.contains("backend-error-modal"));
     assert!(html.contains("Revise os campos destacados e tente novamente."));
-    assert!(html.contains("data-invalid-fields=\"cpf_cnpj,fantasia,cep,endereco,bairro,cidade,uf,codigo_ibge\""));
+    assert!(html.contains(
+        "data-invalid-fields=\"cpf_cnpj,fantasia,cep,endereco,bairro,cidade,uf,codigo_ibge\""
+    ));
 }

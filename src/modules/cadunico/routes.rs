@@ -1,8 +1,8 @@
 use askama::Template;
 use axum::{
     extract::{Form, rejection::FormRejection},
-    http::{HeaderMap, HeaderValue},
     http::StatusCode,
+    http::{HeaderMap, HeaderValue},
     response::{Html, IntoResponse, Response},
 };
 
@@ -62,12 +62,12 @@ pub async fn submit(form: Result<Form<CadUnicoFormInput>, FormRejection>) -> Res
             &rejection.to_string(),
         )),
         Ok(Form(input)) => match CadUnicoService::validate(input) {
-        Ok(_) => {
-            let mut headers = HeaderMap::new();
-            headers.insert("HX-Redirect", HeaderValue::from_static("/cadunico"));
-            (StatusCode::OK, headers).into_response()
-        }
-        Err(error) => render_error_modal(error),
-    },
+            Ok(_) => {
+                let mut headers = HeaderMap::new();
+                headers.insert("HX-Redirect", HeaderValue::from_static("/cadunico"));
+                (StatusCode::OK, headers).into_response()
+            }
+            Err(error) => render_error_modal(error),
+        },
     }
 }

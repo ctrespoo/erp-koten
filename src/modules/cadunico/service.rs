@@ -53,7 +53,10 @@ mod validate {
 
         let error = CadUnicoService::validate(input).unwrap_err();
 
-        assert_eq!(error.to_string(), "Revise os campos destacados e tente novamente.");
+        assert_eq!(
+            error.to_string(),
+            "Revise os campos destacados e tente novamente."
+        );
         assert_eq!(
             error.invalid_fields(),
             &[
