@@ -15,6 +15,13 @@ pub struct CadUnicoCreateTemplate<'a> {
     pub tabs: &'a [TabView<'a>],
 }
 
+#[derive(Template)]
+#[template(path = "cadunico/error_modal.html")]
+pub struct CadUnicoErrorModalTemplate<'a> {
+    pub title: &'a str,
+    pub message: &'a str,
+}
+
 pub const TABS: &[TabView<'static>] = &[
     TabView {
         id: "dados-principais",
