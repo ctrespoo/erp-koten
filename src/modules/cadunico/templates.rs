@@ -20,6 +20,7 @@ pub struct CadUnicoCreateTemplate<'a> {
 pub struct CadUnicoErrorModalTemplate<'a> {
     pub title: &'a str,
     pub message: &'a str,
+    pub invalid_fields: &'a str,
 }
 
 pub const TABS: &[TabView<'static>] = &[

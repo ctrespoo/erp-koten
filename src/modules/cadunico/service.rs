@@ -8,30 +8,35 @@ pub struct CadUnicoService;
 impl CadUnicoService {
     pub fn validate(input: CadUnicoFormInput) -> Result<CadUnicoFormData, CadUnicoFormError> {
         let normalized = input.normalize();
+        let mut invalid_fields = Vec::new();
 
         if normalized.cpf_cnpj.is_empty() {
-            return Err(CadUnicoFormError::MissingCpfCnpj);
+            invalid_fields.push("cpf_cnpj");
         }
         if normalized.fantasia.is_empty() {
-            return Err(CadUnicoFormError::MissingFantasia);
+            invalid_fields.push("fantasia");
         }
         if normalized.cep.is_empty() {
-            return Err(CadUnicoFormError::MissingCep);
+            invalid_fields.push("cep");
         }
         if normalized.endereco.is_empty() {
-            return Err(CadUnicoFormError::MissingEndereco);
+            invalid_fields.push("endereco");
         }
         if normalized.bairro.is_empty() {
-            return Err(CadUnicoFormError::MissingBairro);
+            invalid_fields.push("bairro");
         }
         if normalized.cidade.is_empty() {
-            return Err(CadUnicoFormError::MissingCidade);
+            invalid_fields.push("cidade");
         }
         if normalized.uf.is_empty() {
-            return Err(CadUnicoFormError::MissingUf);
+            invalid_fields.push("uf");
         }
         if normalized.codigo_ibge.is_empty() {
-            return Err(CadUnicoFormError::MissingCodigoIbge);
+            invalid_fields.push("codigo_ibge");
+        }
+
+        if !invalid_fields.is_empty() {
+            return Err(CadUnicoFormError::validation(invalid_fields));
         }
 
         Ok(normalized)
@@ -48,7 +53,20 @@ mod validate {
 
         let error = CadUnicoService::validate(input).unwrap_err();
 
-        assert_eq!(error.to_string(), "cpf_cnpj is required");
+        assert_eq!(error.to_string(), "Revise os campos destacados e tente novamente.");
+        assert_eq!(
+            error.invalid_fields(),
+            &[
+                "cpf_cnpj",
+                "fantasia",
+                "cep",
+                "endereco",
+                "bairro",
+                "cidade",
+                "uf",
+                "codigo_ibge",
+            ]
+        );
     }
 
     #[test]

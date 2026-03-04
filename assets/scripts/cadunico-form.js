@@ -30,6 +30,23 @@ export function nextTabId(tabs, currentId, direction) {
   return tabs[Math.max(index - 1, 0)];
 }
 
+export function parseInvalidFields(value = "") {
+  return value
+    .split(",")
+    .map((field) => field.trim())
+    .filter(Boolean);
+}
+
+export function clearInvalidFields(form) {
+  form
+    .querySelectorAll("[aria-invalid='true']")
+    .forEach((field) => field.removeAttribute("aria-invalid"));
+
+  form
+    .querySelectorAll("[data-invalid='true']")
+    .forEach((container) => container.removeAttribute("data-invalid"));
+}
+
 function formatCpfCnpj(value) {
   const digits = normalizeCpfCnpj(value);
   if (digits.length <= 11) {
@@ -121,6 +138,47 @@ function closeModal(modalRoot, restoreFocusTo) {
   restoreFocusTo?.focus();
 }
 
+function fieldContainerFor(input) {
+  return input.closest(".field, .toggle-field");
+}
+
+function markFieldInvalid(input) {
+  input.setAttribute("aria-invalid", "true");
+  fieldContainerFor(input)?.setAttribute("data-invalid", "true");
+}
+
+function clearFieldInvalid(input) {
+  input.removeAttribute("aria-invalid");
+  fieldContainerFor(input)?.removeAttribute("data-invalid");
+}
+
+function fieldByName(form, fieldName) {
+  return form.querySelector(`[name="${fieldName}"]`);
+}
+
+function activateTabForField(root, field) {
+  const panel = field.closest("[data-tab-panel]");
+  const tabId = panel?.getAttribute("data-tab-panel");
+  if (tabId) {
+    activateTab(root, tabId);
+  }
+}
+
+function applyInvalidFields(root, form, invalidFields) {
+  clearInvalidFields(form);
+
+  const inputs = invalidFields
+    .map((fieldName) => fieldByName(form, fieldName))
+    .filter((field) => field instanceof HTMLElement);
+
+  inputs.forEach((field) => markFieldInvalid(field));
+
+  const firstInvalidField = inputs[0];
+  if (firstInvalidField) {
+    activateTabForField(root, firstInvalidField);
+  }
+}
+
 function bindMasks(root) {
   root.addEventListener("input", (event) => {
     const target = event.target;
@@ -151,6 +209,53 @@ function bindTabs(root) {
     if (!tabId) return;
     activateTab(root, tabId);
     focusFirstField(root);
+  });
+}
+
+function bindHtmxModalSwap(modalRoot) {
+  document.body.addEventListener("htmx:beforeSwap", (event) => {
+    const target = event.detail?.target;
+    const status = event.detail?.xhr?.status;
+
+    if (target !== modalRoot || status !== 422) return;
+
+    event.detail.shouldSwap = true;
+    event.detail.isError = false;
+  });
+}
+
+function bindValidationState(root, form, modalRoot) {
+  const clearIfNeeded = (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    if (!form.contains(target)) return;
+    if (
+      !(target instanceof HTMLInputElement) &&
+      !(target instanceof HTMLSelectElement) &&
+      !(target instanceof HTMLTextAreaElement)
+    ) {
+      return;
+    }
+
+    clearFieldInvalid(target);
+  };
+
+  form.addEventListener("input", clearIfNeeded);
+  form.addEventListener("change", clearIfNeeded);
+
+  document.body.addEventListener("htmx:beforeRequest", (event) => {
+    if (event.detail?.elt !== form) return;
+    clearInvalidFields(form);
+  });
+
+  document.body.addEventListener("htmx:afterSwap", (event) => {
+    const target = event.detail?.target;
+    if (target !== modalRoot) return;
+
+    const modal = modalRoot.querySelector("#backend-error-modal");
+    if (!(modal instanceof HTMLElement)) return;
+
+    applyInvalidFields(root, form, parseInvalidFields(modal.dataset.invalidFields));
   });
 }
 
@@ -194,13 +299,13 @@ function bindKeyboard(root, form, modalRoot) {
     if (event.ctrlKey && event.key.toLowerCase() === "s") {
       event.preventDefault();
       form.requestSubmit();
-      return;
     }
+  });
 
-    if (event.key === "Escape" && modalRoot.firstElementChild) {
-      event.preventDefault();
-      closeModal(modalRoot, restoreFocusTo);
-    }
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || !modalRoot.firstElementChild) return;
+    event.preventDefault();
+    closeModal(modalRoot, restoreFocusTo);
   });
 
   root.addEventListener("click", (event) => {
@@ -236,8 +341,10 @@ export function bootstrapCadUnicoForm(
     activateTab(root, firstTabId);
   }
 
+  bindHtmxModalSwap(modalRoot);
   bindTabs(root);
   bindMasks(root);
+  bindValidationState(root, form, modalRoot);
   bindKeyboard(root, form, modalRoot);
 }
 

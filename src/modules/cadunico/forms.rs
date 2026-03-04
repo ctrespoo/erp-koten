@@ -1,4 +1,22 @@
-use serde::Deserialize;
+use serde::{Deserialize, Deserializer};
+
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum OneOrManyStrings {
+    One(String),
+    Many(Vec<String>),
+}
+
+fn deserialize_string_sequence_or_single<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    match Option::<OneOrManyStrings>::deserialize(deserializer)? {
+        Some(OneOrManyStrings::One(value)) => Ok(vec![value]),
+        Some(OneOrManyStrings::Many(values)) => Ok(values),
+        None => Ok(Vec::new()),
+    }
+}
 
 #[derive(Debug, Default, Deserialize)]
 #[serde(default)]
@@ -10,7 +28,7 @@ pub struct CadUnicoFormInput {
     pub inss: Option<String>,
     pub crea: Option<String>,
     pub email: Option<String>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_string_sequence_or_single")]
     pub telefones: Vec<String>,
     pub aniversario: Option<String>,
     pub id_estrangeiro: Option<String>,

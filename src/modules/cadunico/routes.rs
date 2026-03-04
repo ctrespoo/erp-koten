@@ -1,12 +1,13 @@
 use askama::Template;
 use axum::{
-    extract::Form,
+    extract::{Form, rejection::FormRejection},
     http::{HeaderMap, HeaderValue},
     http::StatusCode,
     response::{Html, IntoResponse, Response},
 };
 
 use super::{
+    errors::CadUnicoFormError,
     forms::CadUnicoFormInput,
     service::CadUnicoService,
     templates::{CadUnicoCreateTemplate, CadUnicoErrorModalTemplate, CadUnicoIndexTemplate, TABS},
@@ -40,24 +41,33 @@ pub async fn create() -> Response {
     }
 }
 
-pub async fn submit(Form(input): Form<CadUnicoFormInput>) -> Response {
-    match CadUnicoService::validate(input) {
+fn render_error_modal(error: CadUnicoFormError) -> Response {
+    let message = error.to_string();
+    let invalid_fields = error.invalid_fields_csv();
+    let template = CadUnicoErrorModalTemplate {
+        title: "Erro ao salvar",
+        message: &message,
+        invalid_fields: &invalid_fields,
+    };
+
+    match template.render() {
+        Ok(html) => (StatusCode::UNPROCESSABLE_ENTITY, html).into_response(),
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+pub async fn submit(form: Result<Form<CadUnicoFormInput>, FormRejection>) -> Response {
+    match form {
+        Err(rejection) => render_error_modal(CadUnicoFormError::from_rejection_message(
+            &rejection.to_string(),
+        )),
+        Ok(Form(input)) => match CadUnicoService::validate(input) {
         Ok(_) => {
             let mut headers = HeaderMap::new();
             headers.insert("HX-Redirect", HeaderValue::from_static("/cadunico"));
             (StatusCode::OK, headers).into_response()
         }
-        Err(error) => {
-            let message = error.to_string();
-            let template = CadUnicoErrorModalTemplate {
-                title: "Erro ao salvar",
-                message: &message,
-            };
-
-            match template.render() {
-                Ok(html) => (StatusCode::UNPROCESSABLE_ENTITY, html).into_response(),
-                Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-            }
-        }
+        Err(error) => render_error_modal(error),
+    },
     }
 }
