@@ -5,8 +5,9 @@ use tokio::net::TcpListener;
 async fn main() -> Result<()> {
     dotenvy::dotenv().ok();
 
+    let state = erp_koten::state::AppState::from_env().await?;
     let listener = TcpListener::bind("127.0.0.1:3000").await?;
-    axum::serve(listener, erp_koten::app::build_app()).await?;
+    axum::serve(listener, erp_koten::app::build_app(state)).await?;
 
     Ok(())
 }

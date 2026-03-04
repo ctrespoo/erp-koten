@@ -1,13 +1,33 @@
 pub use super::forms::CadUnicoFormInput;
 
+use sqlx::PgPool;
+use thiserror::Error;
+
 use super::errors::CadUnicoFormError;
 use super::forms::CadUnicoFormData;
+use super::repository::{CadUnicoRepository, CadUnicoRepositoryError};
 
 pub struct CadUnicoService;
 
 impl CadUnicoService {
+    pub async fn create(
+        pool: &PgPool,
+        input: CadUnicoFormInput,
+    ) -> Result<(), CadUnicoServiceError> {
+        let normalized = Self::validate(input)?;
+
+        CadUnicoRepository::insert(pool, &normalized)
+            .await
+            .map_err(|error| match error {
+                CadUnicoRepositoryError::DuplicateCpfCnpj => {
+                    CadUnicoServiceError::Form(CadUnicoFormError::duplicate_cpf_cnpj())
+                }
+                CadUnicoRepositoryError::Database(error) => CadUnicoServiceError::Unexpected(error),
+            })
+    }
+
     pub fn validate(input: CadUnicoFormInput) -> Result<CadUnicoFormData, CadUnicoFormError> {
-        let normalized = input.normalize();
+        let normalized = input.normalize()?;
         let mut invalid_fields = Vec::new();
 
         if normalized.cpf_cnpj.is_empty() {
@@ -41,6 +61,14 @@ impl CadUnicoService {
 
         Ok(normalized)
     }
+}
+
+#[derive(Debug, Error)]
+pub enum CadUnicoServiceError {
+    #[error(transparent)]
+    Form(#[from] CadUnicoFormError),
+    #[error(transparent)]
+    Unexpected(#[from] sqlx::Error),
 }
 
 #[cfg(test)]

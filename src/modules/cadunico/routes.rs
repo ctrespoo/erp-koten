@@ -1,15 +1,17 @@
 use askama::Template;
 use axum::{
-    extract::{Form, rejection::FormRejection},
+    extract::State,
     http::StatusCode,
     http::{HeaderMap, HeaderValue},
     response::{Html, IntoResponse, Response},
 };
 
+use crate::state::AppState;
+
 use super::{
     errors::CadUnicoFormError,
     forms::CadUnicoFormInput,
-    service::CadUnicoService,
+    service::{CadUnicoService, CadUnicoServiceError},
     templates::{CadUnicoCreateTemplate, CadUnicoErrorModalTemplate, CadUnicoIndexTemplate, TABS},
 };
 
@@ -56,18 +58,18 @@ fn render_error_modal(error: CadUnicoFormError) -> Response {
     }
 }
 
-pub async fn submit(form: Result<Form<CadUnicoFormInput>, FormRejection>) -> Response {
-    match form {
-        Err(rejection) => render_error_modal(CadUnicoFormError::from_rejection_message(
-            &rejection.to_string(),
-        )),
-        Ok(Form(input)) => match CadUnicoService::validate(input) {
-            Ok(_) => {
-                let mut headers = HeaderMap::new();
-                headers.insert("HX-Redirect", HeaderValue::from_static("/cadunico"));
-                (StatusCode::OK, headers).into_response()
-            }
-            Err(error) => render_error_modal(error),
-        },
+pub async fn submit(State(state): State<AppState>, body: String) -> Response {
+    let input = CadUnicoFormInput::from_form_body(&body);
+
+    match CadUnicoService::create(&state.db, input).await {
+        Ok(()) => {
+            let mut headers = HeaderMap::new();
+            headers.insert("HX-Redirect", HeaderValue::from_static("/cadunico"));
+            (StatusCode::OK, headers).into_response()
+        }
+        Err(CadUnicoServiceError::Form(error)) => render_error_modal(error),
+        Err(CadUnicoServiceError::Unexpected(_)) => {
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
     }
 }
