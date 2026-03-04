@@ -131,7 +131,8 @@ async fn insert_cadunico(
 
 #[tokio::test]
 async fn get_cadunico_index_should_return_ok() {
-    let app = test_app();
+    let database = test_database().await;
+    let app = build_app(AppState::new(database.pool.clone()));
 
     let response = app
         .oneshot(
@@ -165,7 +166,8 @@ async fn get_cadunico_create_should_return_ok() {
 
 #[tokio::test]
 async fn get_cadunico_index_should_render_html_layout() {
-    let app = test_app();
+    let database = test_database().await;
+    let app = build_app(AppState::new(database.pool.clone()));
 
     let response = app
         .oneshot(
@@ -187,7 +189,8 @@ async fn get_cadunico_index_should_render_html_layout() {
 
 #[tokio::test]
 async fn get_cadunico_index_should_render_keyboard_list_shell() {
-    let app = test_app();
+    let database = test_database().await;
+    let app = build_app(AppState::new(database.pool.clone()));
 
     let response = app
         .oneshot(
@@ -207,6 +210,58 @@ async fn get_cadunico_index_should_render_keyboard_list_shell() {
     assert!(html.contains("Ctrl+N"));
     assert!(html.contains("id=\"cadunico-search\""));
     assert!(html.contains("id=\"cadunico-list-region\""));
+}
+
+#[tokio::test]
+async fn get_cadunico_index_should_render_existing_records_on_initial_load() {
+    let database = test_database().await;
+    insert_cadunico(
+        &database.pool,
+        "10000000001",
+        "Registro Inicial",
+        "Sao Paulo",
+        "SP",
+    )
+    .await;
+    let app = build_app(AppState::new(database.pool.clone()));
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/cadunico")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let html = String::from_utf8(body.to_vec()).unwrap();
+
+    assert!(html.contains("Registro Inicial"));
+    assert!(!html.contains("Nenhum cadastro encontrado"));
+}
+
+#[tokio::test]
+async fn get_cadunico_index_should_render_delete_dialog_in_the_shell() {
+    let database = test_database().await;
+    let app = build_app(AppState::new(database.pool.clone()));
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/cadunico")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let html = String::from_utf8(body.to_vec()).unwrap();
+
+    assert!(html.contains("data-delete-dialog"));
+    assert!(html.contains("data-row-menu-popover-root"));
 }
 
 #[tokio::test]
@@ -231,6 +286,40 @@ async fn get_cadunico_list_fragment_should_render_empty_state_when_table_is_empt
     assert!(html.contains("data-list-empty"));
     assert!(html.contains("data-page-next"));
     assert!(html.contains("data-page-prev"));
+}
+
+#[tokio::test]
+async fn get_cadunico_list_fragment_should_use_eight_items_as_default_page_size() {
+    let database = test_database().await;
+    for index in 1..=9 {
+        insert_cadunico(
+            &database.pool,
+            &format!("1000000000{index}"),
+            &format!("Registro {index}"),
+            "Cidade",
+            "SP",
+        )
+        .await;
+    }
+    let app = build_app(AppState::new(database.pool.clone()));
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/cadunico/lista")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let html = String::from_utf8(body.to_vec()).unwrap();
+
+    assert!(html.contains("Registro 9"));
+    assert!(html.contains("Registro 2"));
+    assert!(!html.contains("Registro 1"));
+    assert!(html.contains("data-page-next-cursor=\"2\""));
 }
 
 #[tokio::test]
@@ -260,6 +349,26 @@ async fn get_cadunico_list_fragment_should_filter_by_query_across_fantasia_and_c
 }
 
 #[tokio::test]
+async fn get_cadunico_list_fragment_should_not_render_delete_dialog_markup() {
+    let app = test_app();
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/cadunico/lista")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let html = String::from_utf8(body.to_vec()).unwrap();
+
+    assert!(!html.contains("data-delete-dialog"));
+}
+
+#[tokio::test]
 async fn get_cadunico_list_fragment_should_render_next_cursor_when_more_rows_exist() {
     let database = test_database().await;
     insert_cadunico(&database.pool, "10000000001", "Registro 1", "Cidade 1", "SP").await;
@@ -284,6 +393,9 @@ async fn get_cadunico_list_fragment_should_render_next_cursor_when_more_rows_exi
     assert!(html.contains("Registro 4"));
     assert!(html.contains("Registro 3"));
     assert!(!html.contains("Registro 2"));
+    assert!(html.contains(
+        "data-page-next\n      name=\"before\""
+    ));
     assert!(html.contains("data-page-next-cursor=\"3\""));
 }
 
@@ -310,6 +422,9 @@ async fn get_cadunico_list_fragment_should_render_previous_cursor_when_loading_n
     let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
     let html = String::from_utf8(body.to_vec()).unwrap();
 
+    assert!(html.contains(
+        "data-page-prev\n      name=\"after\""
+    ));
     assert!(html.contains("Registro 4"));
     assert!(html.contains("Registro 3"));
     assert!(!html.contains("Registro 5"));
@@ -365,10 +480,11 @@ async fn get_cadunico_list_fragment_should_render_edit_and_delete_actions_for_ea
     let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
     let html = String::from_utf8(body.to_vec()).unwrap();
 
-    assert!(html.contains("Editar (em breve)"));
-    assert!(html.contains("Excluir"));
-    assert!(html.contains("data-row-menu"));
-    assert!(html.contains("data-delete-dialog"));
+    assert!(html.contains("data-row-id=\"1\""));
+    assert!(html.contains("data-row-name=\"Registro 1\""));
+    assert!(html.contains("cadunico-list-actions"));
+    assert!(!html.contains("data-row-menu"));
+    assert!(!html.contains("data-delete-dialog"));
 }
 
 #[tokio::test]

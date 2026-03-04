@@ -114,7 +114,7 @@ fn normalized_search(value: Option<String>) -> Option<String> {
 }
 
 fn normalized_page_size(value: Option<i64>) -> i64 {
-    value.unwrap_or(20).clamp(1, 100)
+    value.unwrap_or(8).clamp(1, 100)
 }
 
 #[derive(Debug, Error)]

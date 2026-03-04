@@ -32,8 +32,20 @@ pub async fn home() -> Html<&'static str> {
     Html("<h1>ERP Koten</h1>")
 }
 
-pub async fn index() -> Response {
-    let page = CadUnicoListPageView::empty();
+pub async fn index(
+    State(state): State<AppState>,
+    Query(query): Query<CadUnicoListInput>,
+) -> Response {
+    let search_value = query.search.clone().unwrap_or_default();
+    let page = match CadUnicoService::list(&state.db, query).await {
+        Ok(page) => map_list_page(page, &search_value),
+        Err(CadUnicoServiceError::Unexpected(_)) => {
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+        Err(CadUnicoServiceError::Form(_)) => {
+            return StatusCode::BAD_REQUEST.into_response();
+        }
+    };
 
     match render_html(&CadUnicoIndexTemplate { page: &page }) {
         Ok(html) => html.into_response(),
@@ -52,8 +64,9 @@ pub async fn list_fragment(
     State(state): State<AppState>,
     Query(query): Query<CadUnicoListInput>,
 ) -> Response {
+    let search_value = query.search.clone().unwrap_or_default();
     let page = match CadUnicoService::list(&state.db, query).await {
-        Ok(page) => map_list_page(page),
+        Ok(page) => map_list_page(page, &search_value),
         Err(CadUnicoServiceError::Unexpected(_)) => {
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
@@ -73,6 +86,8 @@ pub async fn destroy(
     Path(id): Path<i64>,
     Query(query): Query<CadUnicoListInput>,
 ) -> Response {
+    let search_value = query.search.clone().unwrap_or_default();
+
     if let Err(error) = CadUnicoService::delete(&state.db, id).await {
         return match error {
             CadUnicoServiceError::Form(_) => StatusCode::BAD_REQUEST.into_response(),
@@ -81,7 +96,7 @@ pub async fn destroy(
     }
 
     let page = match CadUnicoService::list(&state.db, query).await {
-        Ok(page) => map_list_page(page),
+        Ok(page) => map_list_page(page, &search_value),
         Err(CadUnicoServiceError::Unexpected(_)) => {
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
@@ -127,10 +142,13 @@ pub async fn submit(State(state): State<AppState>, body: String) -> Response {
     }
 }
 
-fn map_list_page(page: super::repository::CadUnicoListPage) -> CadUnicoListPageView {
+fn map_list_page(
+    page: super::repository::CadUnicoListPage,
+    search_value: &str,
+) -> CadUnicoListPageView {
     CadUnicoListPageView {
         heading: "Cadastros",
-        search_value: String::new(),
+        search_value: search_value.to_owned(),
         items: page
             .items
             .into_iter()

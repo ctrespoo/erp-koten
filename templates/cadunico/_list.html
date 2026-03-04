@@ -17,16 +17,16 @@
       </thead>
       <tbody>
         {% for item in page.items %}
-        <tr data-row data-row-id="{{ item.id }}" tabindex="-1">
+        <tr
+          data-row
+          data-row-id="{{ item.id }}"
+          data-row-name="{{ item.fantasia }}"
+          tabindex="-1"
+        >
           <td>{{ item.fantasia }}</td>
           <td>{{ item.cpf_cnpj }}</td>
           <td>{{ item.cidade }}/{{ item.uf }}</td>
-          <td class="cadunico-list-actions">
-            <div class="row-menu" data-row-menu hidden>
-              <button type="button" disabled aria-disabled="true">Editar (em breve)</button>
-              <button type="button" data-row-delete data-row-name="{{ item.fantasia }}">Excluir</button>
-            </div>
-          </td>
+          <td class="cadunico-list-actions"></td>
         </tr>
         {% endfor %}
       </tbody>
@@ -37,7 +37,7 @@
     <button
       type="button"
       data-page-prev
-      name="before"
+      name="after"
       hx-get="/cadunico/lista"
       hx-target="#cadunico-list-region"
       hx-swap="outerHTML"
@@ -52,7 +52,7 @@
     <button
       type="button"
       data-page-next
-      name="after"
+      name="before"
       hx-get="/cadunico/lista"
       hx-target="#cadunico-list-region"
       hx-swap="outerHTML"
@@ -65,5 +65,4 @@
       Proxima
     </button>
   </footer>
-  {% include "cadunico/_delete_dialog.html" %}
 </section>
