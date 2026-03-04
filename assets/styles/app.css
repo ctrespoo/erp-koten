@@ -1,0 +1,90 @@
+:root {
+  --bg: #f4efe7;
+  --panel: #fffdfa;
+  --ink: #161413;
+  --muted: #6a625b;
+  --line: #d7cfc5;
+  --accent: #184a45;
+  --accent-strong: #103430;
+  --focus: #c14f2b;
+  --shadow: 0 24px 60px rgba(22, 20, 19, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+  background:
+    radial-gradient(circle at top, rgba(193, 79, 43, 0.08), transparent 28%),
+    linear-gradient(180deg, #f8f3ec 0%, var(--bg) 100%);
+  color: var(--ink);
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+a {
+  color: inherit;
+}
+
+.shell {
+  width: min(100% - 2rem, 72rem);
+  margin: 0 auto;
+  padding: 4rem 0 6rem;
+}
+
+.shell--narrow {
+  width: min(100% - 2rem, 56rem);
+}
+
+.page-header {
+  padding: 3rem;
+  border: 1px solid var(--line);
+  border-radius: 1.5rem;
+  background: linear-gradient(135deg, rgba(255, 253, 250, 0.96), rgba(244, 239, 231, 0.92));
+  box-shadow: var(--shadow);
+}
+
+.eyebrow {
+  margin: 0 0 0.75rem;
+  color: var(--focus);
+  font-size: 0.82rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.page-header h1 {
+  margin: 0;
+  font-size: clamp(2.5rem, 4vw, 4.75rem);
+  line-height: 0.95;
+}
+
+.lede {
+  max-width: 36rem;
+  margin: 1.25rem 0 0;
+  color: var(--muted);
+  font-size: 1.05rem;
+  line-height: 1.7;
+}
+
+.primary-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 2rem;
+  padding: 0.9rem 1.35rem;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--panel);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.primary-link:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
