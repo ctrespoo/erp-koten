@@ -18,10 +18,57 @@ function pageButton(root, direction) {
   return root.querySelector(direction === "left" ? "[data-page-prev]" : "[data-page-next]");
 }
 
-function closeAllMenus(root) {
-  root.querySelectorAll("[data-row-menu]").forEach((menu) => {
-    menu.hidden = true;
-  });
+function currentDialog(root) {
+  return root.querySelector("[data-delete-dialog]");
+}
+
+function popoverRoot(root) {
+  return root.querySelector("[data-row-menu-popover-root]");
+}
+
+function currentPopover(root) {
+  return root.querySelector("[data-row-menu-popover]");
+}
+
+function openDialog(dialog) {
+  if (!(dialog instanceof HTMLDialogElement)) return;
+  if (typeof dialog.showModal === "function") {
+    dialog.showModal();
+    return;
+  }
+
+  dialog.setAttribute("open", "");
+}
+
+function closeDialog(dialog, value) {
+  if (!(dialog instanceof HTMLDialogElement)) return;
+  if (typeof dialog.close === "function") {
+    dialog.close(value);
+    return;
+  }
+
+  dialog.removeAttribute("open");
+}
+
+function currentRowFromPopover(root) {
+  const menu = currentPopover(root);
+  const rowId = menu?.getAttribute("data-row-id");
+  if (!rowId) return null;
+  return root.querySelector(`[data-row][data-row-id="${rowId}"]`);
+}
+
+function closeFloatingMenu(root, { restoreFocus = true } = {}) {
+  const host = popoverRoot(root);
+  if (!(host instanceof HTMLElement)) return false;
+
+  const row = restoreFocus ? currentRowFromPopover(root) : null;
+  host.replaceChildren();
+
+  if (restoreFocus && row instanceof HTMLElement) {
+    row.focus();
+  }
+
+  return true;
 }
 
 function setActiveRow(root, targetIndex) {
@@ -36,34 +83,45 @@ function setActiveRow(root, targetIndex) {
   row?.focus();
 }
 
-function openMenuForRow(row) {
-  const root = row.closest("[data-cadunico-list-root]");
-  if (!(root instanceof HTMLElement)) return;
+function positionPopover(menu, row) {
+  if (!(menu instanceof HTMLElement) || !(row instanceof HTMLElement)) return;
 
-  closeAllMenus(root);
-  const menu = row.querySelector("[data-row-menu]");
+  const anchor = row.querySelector(".cadunico-list-actions") ?? row.lastElementChild ?? row;
+  if (!(anchor instanceof HTMLElement)) return;
+
+  const rect = anchor.getBoundingClientRect();
+  menu.style.top = `${rect.bottom + 8}px`;
+  menu.style.left = `${Math.max(16, rect.right - 220)}px`;
+  menu.style.minWidth = `${Math.max(180, rect.width || 180)}px`;
+}
+
+function openFloatingMenu(root, row) {
+  const host = popoverRoot(root);
+  if (!(host instanceof HTMLElement) || !(row instanceof HTMLElement)) return;
+
+  host.innerHTML = `
+    <div class="row-menu-popover" data-row-menu-popover data-row-id="${row.dataset.rowId ?? ""}" hidden>
+      <button type="button" disabled aria-disabled="true">Editar (em breve)</button>
+      <button
+        type="button"
+        data-row-delete
+        data-row-id="${row.dataset.rowId ?? ""}"
+        data-row-name="${row.dataset.rowName ?? ""}"
+      >
+        Excluir
+      </button>
+    </div>
+  `;
+
+  const menu = host.querySelector("[data-row-menu-popover]");
   if (!(menu instanceof HTMLElement)) return;
 
   menu.hidden = false;
-  const firstAction = menu.querySelector("button:not([disabled]):not([aria-disabled='true'])");
+  positionPopover(menu, row);
+  const firstAction = menu.querySelector("[data-row-delete]");
   if (firstAction instanceof HTMLElement) {
     firstAction.focus();
   }
-}
-
-function closeFocusedMenu(root) {
-  const activeElement = document.activeElement;
-  if (!(activeElement instanceof HTMLElement)) return false;
-
-  const menu = activeElement.closest("[data-row-menu]");
-  if (!(menu instanceof HTMLElement)) return false;
-
-  menu.hidden = true;
-  const row = menu.closest("[data-row]");
-  if (row instanceof HTMLElement) {
-    row.focus();
-  }
-  return true;
 }
 
 function debounceSearch(root) {
@@ -84,6 +142,7 @@ function debounceSearch(root) {
         params.set("q", value);
       }
 
+      closeFloatingMenu(root, { restoreFocus: false });
       const url = params.toString() ? `/cadunico/lista?${params}` : "/cadunico/lista";
       htmx.ajax("GET", url, { target: region, swap: "outerHTML" });
     }, 250);
@@ -97,12 +156,8 @@ function debounceSearch(root) {
 }
 
 function bindDeleteDialog(root) {
-  const dialog = root.querySelector("[data-delete-dialog]");
-  if (!(dialog instanceof HTMLDialogElement)) return () => {};
-
   let pendingRowId = null;
-  const summary = dialog.querySelector("[data-delete-summary]");
-  const confirm = dialog.querySelector("[data-confirm-delete]");
+  let pendingRowName = "";
 
   const onClick = (event) => {
     const target = event.target;
@@ -111,24 +166,27 @@ function bindDeleteDialog(root) {
     const deleteButton = target.closest("[data-row-delete]");
     if (!(deleteButton instanceof HTMLElement)) return;
 
-    const row = deleteButton.closest("[data-row]");
-    if (!(row instanceof HTMLElement)) return;
+    const dialog = currentDialog(root);
+    if (!(dialog instanceof HTMLDialogElement)) return;
 
-    pendingRowId = row.dataset.rowId ?? null;
+    pendingRowId = deleteButton.getAttribute("data-row-id");
+    pendingRowName = deleteButton.getAttribute("data-row-name") ?? "cadastro selecionado";
+
+    const summary = dialog.querySelector("[data-delete-summary]");
     if (summary instanceof HTMLElement) {
-      const rowName = deleteButton.getAttribute("data-row-name") ?? "cadastro selecionado";
-      summary.textContent = `Confirme a exclusao de ${rowName}.`;
+      summary.textContent = `Confirme a exclusao de ${pendingRowName}.`;
     }
-    dialog.showModal();
+
+    openDialog(dialog);
   };
 
-  const onClose = (event) => {
-    const target = event.target;
-    if (target !== confirm || !pendingRowId) return;
+  const onConfirm = () => {
+    if (!pendingRowId) return;
 
     const htmx = window.htmx;
     const region = root.querySelector("#cadunico-list-region");
     const search = root.querySelector("#cadunico-search");
+
     if (htmx?.ajax && region instanceof HTMLElement) {
       const params = new URLSearchParams();
       if (search instanceof HTMLInputElement && search.value.trim()) {
@@ -141,15 +199,23 @@ function bindDeleteDialog(root) {
         swap: "outerHTML",
       });
     }
+
+    const dialog = currentDialog(root);
+    closeFloatingMenu(root, { restoreFocus: false });
+    closeDialog(dialog, "confirm");
     pendingRowId = null;
+    pendingRowName = "";
   };
 
+  const dialog = currentDialog(root);
+  const confirm = dialog?.querySelector("[data-confirm-delete]");
+
   root.addEventListener("click", onClick);
-  dialog.addEventListener("close", onClose);
+  confirm?.addEventListener("click", onConfirm);
 
   return () => {
     root.removeEventListener("click", onClick);
-    dialog.removeEventListener("close", onClose);
+    confirm?.removeEventListener("click", onConfirm);
   };
 }
 
@@ -165,6 +231,20 @@ export function bootstrapCadUnicoList(
 
   const cleanupSearch = debounceSearch(root);
   const cleanupDelete = bindDeleteDialog(root);
+
+  const onDocumentClick = (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    if (target.closest("[data-row-menu-popover]")) return;
+    closeFloatingMenu(root, { restoreFocus: false });
+  };
+
+  const onHtmxAfterSwap = (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    if (!root.contains(target)) return;
+    bootstrapCadUnicoList(root);
+  };
 
   const onKeyDown = (event) => {
     const rows = visibleRows(root);
@@ -185,21 +265,22 @@ export function bootstrapCadUnicoList(
 
     if (event.ctrlKey && key === "n") {
       event.preventDefault();
-      if (createLink instanceof HTMLElement) {
-        createLink.click();
-      }
+      createLink?.click();
       return;
     }
 
     if (event.key === "Escape") {
-      if (closeFocusedMenu(root)) {
+      if (currentPopover(root)) {
         event.preventDefault();
+        closeFloatingMenu(root);
         return;
       }
 
-      const dialog = root.querySelector("[data-delete-dialog]");
+      const dialog = currentDialog(root);
       if (dialog instanceof HTMLDialogElement && dialog.open) {
-        dialog.close("cancel");
+        closeDialog(dialog, "cancel");
+        const row = currentRowFromPopover(root);
+        row?.focus();
         event.preventDefault();
         return;
       }
@@ -217,6 +298,7 @@ export function bootstrapCadUnicoList(
       if (rows.length === 0) return;
 
       event.preventDefault();
+      closeFloatingMenu(root, { restoreFocus: false });
       const direction = event.key === "ArrowDown" ? "down" : "up";
       const currentIndex = activeRowIndex(rows);
       const targetIndex = nextRowIndex(rows.length, currentIndex, direction);
@@ -229,6 +311,7 @@ export function bootstrapCadUnicoList(
       if (!(button instanceof HTMLButtonElement) || button.disabled) return;
 
       event.preventDefault();
+      closeFloatingMenu(root, { restoreFocus: false });
       button.click();
       return;
     }
@@ -239,16 +322,20 @@ export function bootstrapCadUnicoList(
       if (!(row instanceof HTMLElement)) return;
 
       event.preventDefault();
-      openMenuForRow(row);
+      openFloatingMenu(root, row);
     }
   };
 
+  document.addEventListener("click", onDocumentClick);
   document.addEventListener("keydown", onKeyDown);
+  document.body.addEventListener("htmx:afterSwap", onHtmxAfterSwap);
 
   activeTeardown = () => {
     cleanupSearch();
     cleanupDelete();
+    document.removeEventListener("click", onDocumentClick);
     document.removeEventListener("keydown", onKeyDown);
+    document.body.removeEventListener("htmx:afterSwap", onHtmxAfterSwap);
   };
 }
 

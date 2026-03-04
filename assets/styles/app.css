@@ -205,7 +205,6 @@ a {
 .cadunico-list-table tbody tr {
   border-top: 1px solid rgba(255, 255, 255, 0.04);
   transition:
-    background 160ms ease,
     transform 160ms ease,
     border-color 160ms ease;
 }
@@ -214,32 +213,59 @@ a {
   border-top: 0;
 }
 
-.cadunico-list-table tbody tr:hover,
-.cadunico-list-table tbody tr[data-row-active="true"] {
-  background: linear-gradient(90deg, rgba(35, 129, 120, 0.16), rgba(35, 129, 120, 0.04));
-}
-
 .cadunico-list-table td {
   padding: 1rem 0;
   vertical-align: top;
+  position: relative;
+  transition: background 160ms ease;
+}
+
+.cadunico-list-table tbody tr:hover td,
+.cadunico-list-table tbody tr[data-row-active="true"] td {
+  background: linear-gradient(90deg, rgba(35, 129, 120, 0.16), rgba(35, 129, 120, 0.04));
+}
+
+.cadunico-list-table tbody tr:hover td:first-child,
+.cadunico-list-table tbody tr[data-row-active="true"] td:first-child {
+  border-radius: 1rem 0 0 1rem;
+  padding-left: 0.65rem;
+}
+
+.cadunico-list-table tbody tr:hover td:last-child,
+.cadunico-list-table tbody tr[data-row-active="true"] td:last-child {
+  border-radius: 0 1rem 1rem 0;
+  padding-right: 0.65rem;
 }
 
 .cadunico-list-actions {
-  width: 14rem;
+  width: 9rem;
+  text-align: right;
 }
 
-.row-menu {
-  display: inline-flex;
-  gap: 0.55rem;
-  flex-wrap: wrap;
-  justify-content: flex-end;
+.row-menu-popover-root {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 50;
 }
 
-.row-menu[hidden] {
+.row-menu-popover {
+  position: absolute;
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.55rem;
+  border: 1px solid rgba(239, 155, 97, 0.2);
+  border-radius: 1.1rem;
+  background: linear-gradient(180deg, rgba(20, 23, 27, 0.98), rgba(13, 15, 19, 1));
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.34);
+  pointer-events: auto;
+}
+
+.row-menu-popover[hidden] {
   display: none;
 }
 
-.row-menu button,
+.row-menu-popover button,
 .list-pagination button,
 .delete-dialog__actions button {
   border: 1px solid var(--line);
@@ -249,15 +275,13 @@ a {
   cursor: pointer;
   padding: 0.75rem 1rem;
   font: inherit;
-}
-
-.row-menu button[aria-disabled="true"],
+.row-menu-popover button[aria-disabled="true"],
 .list-pagination button:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
 
-.row-menu button:not([aria-disabled="true"]):hover,
+.row-menu-popover button:not([aria-disabled="true"]):hover,
 .list-pagination button:not(:disabled):hover,
 .delete-dialog__actions button:hover {
   border-color: rgba(239, 155, 97, 0.44);

@@ -17,23 +17,13 @@ function mountList() {
         <div class="cadunico-list-table">
           <table>
             <tbody>
-              <tr data-row data-row-id="10" tabindex="-1">
+              <tr data-row data-row-id="10" data-row-name="Registro 1" tabindex="-1">
                 <td>Registro 1</td>
-                <td>
-                  <div data-row-menu hidden>
-                    <button type="button" disabled aria-disabled="true">Editar (em breve)</button>
-                    <button type="button" data-row-delete>Excluir</button>
-                  </div>
-                </td>
+                <td class="cadunico-list-actions"></td>
               </tr>
-              <tr data-row data-row-id="11" tabindex="-1">
+              <tr data-row data-row-id="11" data-row-name="Registro 2" tabindex="-1">
                 <td>Registro 2</td>
-                <td>
-                  <div data-row-menu hidden>
-                    <button type="button" disabled aria-disabled="true">Editar (em breve)</button>
-                    <button type="button" data-row-delete>Excluir</button>
-                  </div>
-                </td>
+                <td class="cadunico-list-actions"></td>
               </tr>
             </tbody>
           </table>
@@ -42,13 +32,15 @@ function mountList() {
           <button type="button" data-page-prev>Anterior</button>
           <button type="button" data-page-next>Proxima</button>
         </footer>
-        <dialog data-delete-dialog>
-          <form method="dialog">
-            <button type="submit" value="cancel">Cancelar</button>
-            <button type="submit" data-confirm-delete>Excluir</button>
-          </form>
-        </dialog>
       </section>
+      <div data-row-menu-popover-root></div>
+      <dialog data-delete-dialog>
+        <form method="dialog">
+          <p data-delete-summary>Confirme a exclusao do cadastro selecionado.</p>
+          <button type="submit" value="cancel">Cancelar</button>
+          <button type="submit" data-confirm-delete>Excluir</button>
+        </form>
+      </dialog>
     </main>
   `;
 
@@ -107,27 +99,44 @@ describe("cadunico list keyboard helpers", () => {
     expect(prevSpy).toHaveBeenCalledTimes(1);
   });
 
-  it("bootstrapCadUnicoList should open the row menu on Enter and restore focus on Escape", () => {
-    mountList();
-    const row = document.querySelector("[data-row]");
-    const menu = row.querySelector("[data-row-menu]");
-    const firstAction = menu.querySelector("[data-row-delete]");
+  it("bootstrapCadUnicoList should open a floating menu for the active row", () => {
+    const root = mountList();
+    const popoverRoot = root.querySelector("[data-row-menu-popover-root]");
 
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
 
+    const menu = popoverRoot.querySelector("[data-row-menu-popover]");
     expect(menu.hidden).toBe(false);
-    expect(document.activeElement).toBe(firstAction);
+    expect(menu.getAttribute("data-row-id")).toBe("10");
+  });
 
+  it("bootstrapCadUnicoList should close the floating menu on Escape and restore focus", () => {
+    mountList();
+    const row = document.querySelector("[data-row]");
+
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
 
-    expect(menu.hidden).toBe(true);
     expect(document.activeElement).toBe(row);
   });
 
+  it("bootstrapCadUnicoList should use the persistent delete dialog after a list swap", () => {
+    const root = mountList();
+    window.htmx = { ajax: vi.fn() };
+
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    root.querySelector("[data-row-delete]").click();
+
+    const dialog = root.querySelector("[data-delete-dialog]");
+    expect(dialog.open).toBe(true);
+  });
+
   it("bootstrapCadUnicoList should navigate to /cadunico/criar on Ctrl+N", () => {
-    mountList();
-    const createLink = document.querySelector("[data-create-link]");
+    const root = mountList();
+    const createLink = root.querySelector("[data-create-link]");
     const clickSpy = vi.fn((event) => event.preventDefault());
     createLink.addEventListener("click", clickSpy);
 
