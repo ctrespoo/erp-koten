@@ -1,0 +1,88 @@
+{% extends "layouts/app.html" %}
+
+{% block title %}Novo Cadastro Unico{% endblock %}
+
+{% block body %}
+<main class="shell shell--wide" data-cadunico-root>
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">Cadastro Unico</p>
+      <h1>Novo cadastro</h1>
+    </div>
+    <p class="shortcut-help">
+      Tab/Shift+Tab ou setas verticais navegam campos. Ctrl + setas horizontais trocam tabs. Ctrl+S envia.
+    </p>
+  </header>
+
+  <form
+    class="cadunico-form"
+    hx-post="/cadunico"
+    hx-target="#cadunico-modal-root"
+    hx-swap="innerHTML"
+    data-cadunico-form
+  >
+    <nav class="tab-strip" aria-label="Secoes do cadastro" data-tab-list>
+      {% for tab in tabs %}
+      <button type="button" class="tab-button" data-tab-trigger data-tab-id="{{ tab.id }}">
+        {{ tab.label }}
+      </button>
+      {% endfor %}
+    </nav>
+
+    <section class="tab-panel is-active" data-tab-panel="dados-principais">
+      <input name="cpf_cnpj" data-mask="cpf_cnpj" required />
+      <input name="inscricao_estadual" />
+      <input name="inscricao_municipal" />
+      <input name="fantasia" required />
+      <input name="inss" />
+      <input name="crea" />
+      <input name="email" type="email" />
+      <div data-phones-list>
+        <input name="telefones" data-mask="telefone" />
+      </div>
+      <input name="aniversario" type="date" />
+      <input name="id_estrangeiro" />
+      <input name="codigo_pais" />
+    </section>
+
+    <section class="tab-panel" data-tab-panel="endereco">
+      <input name="cep" data-mask="cep" required />
+      <input name="endereco" required />
+      <input name="numero" />
+      <input name="complemento" />
+      <input name="bairro" required />
+      <input name="cidade" required />
+      <input name="uf" maxlength="2" required />
+      <input name="codigo_ibge" maxlength="7" required />
+    </section>
+
+    <section class="tab-panel" data-tab-panel="parametros">
+      <input type="checkbox" name="enviar_nfe" />
+      <input type="checkbox" name="enviar_boleto" />
+      <input type="checkbox" name="enviar_extrato" />
+      <input type="checkbox" name="etiqueta" />
+      <input type="checkbox" name="comissao" />
+      <input type="checkbox" name="construcao_civil" />
+    </section>
+
+    <section class="tab-panel" data-tab-panel="cobranca">
+      <input name="cep_cobranca" data-mask="cep" />
+      <input name="endereco_cobranca" />
+      <input name="numero_cobranca" />
+      <input name="complemento_cobranca" />
+      <input name="bairro_cobranca" />
+      <input name="cidade_cobranca" />
+      <input name="uf_cobranca" maxlength="2" />
+      <input name="codigo_ibge_cobranca" maxlength="7" />
+      <input name="referencia_cobranca" />
+    </section>
+
+    <footer class="form-footer">
+      <button type="submit">Salvar</button>
+    </footer>
+  </form>
+
+  <div id="cadunico-modal-root" aria-live="assertive"></div>
+</main>
+<script type="module" src="/assets/scripts/cadunico-form.js"></script>
+{% endblock %}

@@ -12,6 +12,7 @@
     },
     "devDependencies": {
         "@types/bun": "latest",
+        "jsdom": "^26.0.0",
         "oxfmt": "^0.36.0",
         "oxlint": "^1.51.0",
         "vitest": "^4.0.18"
