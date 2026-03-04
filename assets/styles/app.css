@@ -25,6 +25,9 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
+  background: radial-gradient(circle at top left, #fffaf3 0%, var(--bg) 42%, #efe6da 100%);
+  color: var(--ink);
+  font: 400 16px/1.4 "IBM Plex Sans", "Segoe UI", sans-serif;
 }
 
 a {
@@ -91,6 +94,10 @@ a {
 
 .shell--wide {
   width: min(100% - 2rem, 90rem);
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  padding: 1.5rem 0;
 }
 
 .shortcut-help {
@@ -135,6 +142,8 @@ a {
   display: none;
   grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
   gap: 1rem;
+  max-height: calc(100vh - 240px);
+  overflow: auto;
 }
 
 .tab-panel.is-active {
@@ -191,6 +200,11 @@ a {
   border-radius: 1.5rem;
   background: var(--panel);
   box-shadow: var(--shadow);
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
 }
 
 @media (max-width: 720px) {

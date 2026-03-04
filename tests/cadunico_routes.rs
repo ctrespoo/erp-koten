@@ -87,6 +87,31 @@ async fn get_cadunico_create_should_render_tabbed_form_and_all_schema_fields() {
 }
 
 #[tokio::test]
+async fn get_cadunico_create_should_expose_shortcuts_and_modal_hooks() {
+    let app = build_app();
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/cadunico/criar")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let html = String::from_utf8(body.to_vec()).unwrap();
+
+    assert!(html.contains(
+        "Tab/Shift+Tab ou setas verticais navegam campos. Ctrl + setas horizontais trocam tabs. Ctrl+S envia."
+    ));
+    assert!(html.contains("id=\"cadunico-modal-root\""));
+    assert!(html.contains("data-cadunico-root"));
+    assert!(html.contains("class=\"shell shell--wide\""));
+}
+
+#[tokio::test]
 async fn post_cadunico_should_return_hx_redirect_when_payload_is_valid() {
     let app = build_app();
 
