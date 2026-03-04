@@ -88,3 +88,119 @@ a {
   outline: 3px solid var(--focus);
   outline-offset: 3px;
 }
+
+.shell--wide {
+  width: min(100% - 2rem, 90rem);
+}
+
+.shortcut-help {
+  margin: 1.5rem 0 0;
+  color: var(--muted);
+  max-width: 42rem;
+}
+
+.cadunico-form {
+  margin-top: 2rem;
+  padding: 2rem;
+  border: 1px solid var(--line);
+  border-radius: 1.5rem;
+  background: rgba(255, 253, 250, 0.94);
+  box-shadow: var(--shadow);
+}
+
+.tab-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.tab-button {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0.85rem 1.2rem;
+  font: inherit;
+}
+
+.tab-button.is-active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--panel);
+}
+
+.tab-panel {
+  display: none;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 1rem;
+}
+
+.tab-panel.is-active {
+  display: grid;
+}
+
+.tab-panel input {
+  width: 100%;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+}
+
+.form-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1.5rem;
+}
+
+.form-footer button,
+.modal__card button {
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--panel);
+  cursor: pointer;
+  padding: 0.9rem 1.4rem;
+  font: inherit;
+  font-weight: 700;
+}
+
+#cadunico-modal-root {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+.modal {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background: rgba(22, 20, 19, 0.38);
+  pointer-events: auto;
+}
+
+.modal__card {
+  width: min(100%, 28rem);
+  padding: 1.5rem;
+  border-radius: 1.5rem;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+@media (max-width: 720px) {
+  .shell {
+    width: min(100% - 1rem, 72rem);
+    padding: 1rem 0 3rem;
+  }
+
+  .page-header,
+  .cadunico-form {
+    padding: 1.25rem;
+  }
+}
