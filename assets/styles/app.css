@@ -204,9 +204,7 @@ a {
 
 .cadunico-list-table tbody tr {
   border-top: 1px solid rgba(255, 255, 255, 0.04);
-  transition:
-    transform 160ms ease,
-    border-color 160ms ease;
+  transition: border-color 160ms ease;
 }
 
 .cadunico-list-table tbody tr:first-child {
@@ -228,13 +226,20 @@ a {
 .cadunico-list-table tbody tr:hover td:first-child,
 .cadunico-list-table tbody tr[data-row-active="true"] td:first-child {
   border-radius: 1rem 0 0 1rem;
-  padding-left: 0.65rem;
 }
 
 .cadunico-list-table tbody tr:hover td:last-child,
 .cadunico-list-table tbody tr[data-row-active="true"] td:last-child {
   border-radius: 0 1rem 1rem 0;
-  padding-right: 0.65rem;
+}
+
+.cadunico-list-table tbody tr[data-row-active="true"] td {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.cadunico-list-table tbody tr[data-row-active="true"] {
+  outline: 2px solid color-mix(in srgb, var(--focus) 55%, transparent);
+  outline-offset: -2px;
 }
 
 .cadunico-list-actions {
@@ -339,6 +344,10 @@ a {
   display: flex;
   justify-content: flex-end;
   gap: 0.75rem;
+}
+
+.delete-dialog__actions .button--danger {
+  background: color-mix(in srgb, #b13a3a 72%, #7f2929 28%);
 }
 
 .cadunico-form {

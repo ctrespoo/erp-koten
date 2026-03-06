@@ -131,6 +131,25 @@ describe("cadunico list keyboard helpers", () => {
     expect(menu.getAttribute("data-row-id")).toBe("10");
   });
 
+  it("Enter on focused menu item should open delete dialog", () => {
+    mountList();
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+
+    expect(document.querySelector("[data-delete-dialog]").open).toBe(true);
+  });
+
+  it("active row should remain the same when opening menu", () => {
+    mountList();
+    const rows = Array.from(document.querySelectorAll("[data-row]"));
+
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+
+    expect(rows[0].dataset.rowActive).toBe("true");
+  });
+
   it("bootstrapCadUnicoList should close the floating menu on Escape and restore focus", () => {
     mountList();
     const row = document.querySelector("[data-row]");
