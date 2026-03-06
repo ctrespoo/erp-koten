@@ -165,6 +165,48 @@ async fn get_cadunico_create_should_return_ok() {
 }
 
 #[tokio::test]
+async fn get_cadunico_create_should_render_form_shell_classes() {
+    let app = test_app();
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/cadunico/criar")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let html = String::from_utf8(body.to_vec()).unwrap();
+
+    assert!(html.contains("class=\"cadunico-form\""));
+    assert!(html.contains("class=\"tab-strip\""));
+    assert!(html.contains("class=\"form-footer\""));
+}
+
+#[tokio::test]
+async fn get_cadunico_index_should_render_delete_dialog_actions_semantics() {
+    let database = test_database().await;
+    let app = build_app(AppState::new(database.pool.clone()));
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/cadunico")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let html = String::from_utf8(body.to_vec()).unwrap();
+
+    assert!(html.contains("class=\"button button--secondary\""));
+    assert!(html.contains("class=\"button button--danger\""));
+    assert!(html.contains("data-confirm-delete"));
+}
+
+#[tokio::test]
 async fn get_cadunico_index_should_render_html_layout() {
     let database = test_database().await;
     let app = build_app(AppState::new(database.pool.clone()));
