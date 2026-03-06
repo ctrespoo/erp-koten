@@ -35,9 +35,12 @@ function clamp(value, min, max) {
 }
 
 export function clampPopoverPosition(anchor, menuRect, viewport) {
+  const minInset = 16;
+  const maxTop = Math.max(minInset, viewport.height - menuRect.height - minInset);
+  const maxLeft = Math.max(minInset, viewport.width - menuRect.width - minInset);
   return {
-    top: clamp(anchor.top, 16, viewport.height - menuRect.height - 16),
-    left: clamp(anchor.left, 16, viewport.width - menuRect.width - 16),
+    top: clamp(anchor.top, minInset, maxTop),
+    left: clamp(anchor.left, minInset, maxLeft),
   };
 }
 

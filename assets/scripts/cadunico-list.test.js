@@ -173,6 +173,17 @@ describe("cadunico list keyboard helpers", () => {
     expect(result.top).toBeLessThanOrEqual(720 - 120 - 16);
   });
 
+  it("popover clamp should never return negative coordinates on tiny viewports", () => {
+    const result = clampPopoverPosition(
+      { top: 120, left: 280 },
+      { width: 220, height: 160 },
+      { width: 180, height: 140 },
+    );
+
+    expect(result.left).toBeGreaterThanOrEqual(16);
+    expect(result.top).toBeGreaterThanOrEqual(16);
+  });
+
   it("bootstrapCadUnicoList should use the persistent delete dialog after a list swap", () => {
     const root = mountList();
     window.htmx = { ajax: vi.fn() };
