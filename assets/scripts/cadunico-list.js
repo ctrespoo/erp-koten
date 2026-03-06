@@ -269,6 +269,36 @@ export function bootstrapCadUnicoList(
       return;
     }
 
+    const menu = currentPopover(root);
+    if (menu instanceof HTMLElement) {
+      const menuButtons = Array.from(menu.querySelectorAll("button:not([disabled])"));
+      const currentIndex = menuButtons.findIndex((button) => button === activeElement);
+
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        if (menuButtons.length === 0) return;
+        event.preventDefault();
+
+        const direction = event.key === "ArrowDown" ? "down" : "up";
+        const nextIndex = nextRowIndex(menuButtons.length, currentIndex, direction);
+        menuButtons[nextIndex]?.focus();
+        return;
+      }
+
+      if (event.key === "Enter") {
+        const target = currentIndex >= 0 ? menuButtons[currentIndex] : menuButtons[0];
+        if (!(target instanceof HTMLButtonElement)) return;
+        event.preventDefault();
+        target.click();
+        return;
+      }
+
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeFloatingMenu(root);
+        return;
+      }
+    }
+
     if (event.key === "Escape") {
       if (currentPopover(root)) {
         event.preventDefault();

@@ -82,6 +82,22 @@ describe("cadunico list keyboard helpers", () => {
     expect(document.activeElement).toBe(rows[0]);
   });
 
+  it("menu navigation should consume ArrowUp/ArrowDown when row menu is open", () => {
+    mountList();
+    const rows = Array.from(document.querySelectorAll("[data-row]"));
+
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+
+    const menuButton = document.querySelector("[data-row-delete]");
+    expect(document.activeElement).toBe(menuButton);
+
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+
+    expect(document.activeElement).toBe(menuButton);
+    expect(rows[0].dataset.rowActive).toBe("true");
+  });
+
   it("bootstrapCadUnicoList should change pages with ArrowLeft and ArrowRight outside the search field", () => {
     mountList();
     const nextButton = document.querySelector("[data-page-next]");
