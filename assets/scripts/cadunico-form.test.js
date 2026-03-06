@@ -66,6 +66,28 @@ describe("cadunico keyboard helpers", () => {
     expect(detail.isError).toBe(false);
   });
 
+  it("create form should keep first tab active on bootstrap", () => {
+    document.body.innerHTML = `
+      <main data-cadunico-root>
+        <form data-cadunico-form>
+          <button data-tab-trigger data-tab-id="dados-principais"></button>
+          <button data-tab-trigger data-tab-id="endereco"></button>
+          <section class="tab-panel" data-tab-panel="dados-principais"></section>
+          <section class="tab-panel" data-tab-panel="endereco"></section>
+        </form>
+        <div id="cadunico-modal-root"></div>
+      </main>
+    `;
+
+    bootstrapCadUnicoForm(document.querySelector("[data-cadunico-root]"));
+    expect(
+      document
+        .querySelector('[data-tab-trigger][data-tab-id="dados-principais"]')
+        .classList
+        .contains("is-active"),
+    ).toBe(true);
+  });
+
   it("parseInvalidFields should read comma separated field names", () => {
     expect(parseInvalidFields("cpf_cnpj, fantasia ,cep")).toEqual([
       "cpf_cnpj",

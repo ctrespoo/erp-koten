@@ -30,6 +30,20 @@ function currentPopover(root) {
   return root.querySelector("[data-row-menu-popover]");
 }
 
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+export function clampPopoverPosition(anchor, menuRect, viewport) {
+  const minInset = 16;
+  const maxTop = Math.max(minInset, viewport.height - menuRect.height - minInset);
+  const maxLeft = Math.max(minInset, viewport.width - menuRect.width - minInset);
+  return {
+    top: clamp(anchor.top, minInset, maxTop),
+    left: clamp(anchor.left, minInset, maxLeft),
+  };
+}
+
 function openDialog(dialog) {
   if (!(dialog instanceof HTMLDialogElement)) return;
   if (typeof dialog.showModal === "function") {
@@ -90,8 +104,13 @@ function positionPopover(menu, row) {
   if (!(anchor instanceof HTMLElement)) return;
 
   const rect = anchor.getBoundingClientRect();
-  menu.style.top = `${rect.bottom + 8}px`;
-  menu.style.left = `${Math.max(16, rect.right - 220)}px`;
+  const position = clampPopoverPosition(
+    { top: rect.bottom + 8, left: rect.right - 220 },
+    { width: 220, height: menu.offsetHeight || 120 },
+    { width: window.innerWidth, height: window.innerHeight },
+  );
+  menu.style.top = `${position.top}px`;
+  menu.style.left = `${position.left}px`;
   menu.style.minWidth = `${Math.max(180, rect.width || 180)}px`;
 }
 
@@ -267,6 +286,36 @@ export function bootstrapCadUnicoList(
       event.preventDefault();
       createLink?.click();
       return;
+    }
+
+    const menu = currentPopover(root);
+    if (menu instanceof HTMLElement) {
+      const menuButtons = Array.from(menu.querySelectorAll("button:not([disabled])"));
+      const currentIndex = menuButtons.findIndex((button) => button === activeElement);
+
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        if (menuButtons.length === 0) return;
+        event.preventDefault();
+
+        const direction = event.key === "ArrowDown" ? "down" : "up";
+        const nextIndex = nextRowIndex(menuButtons.length, currentIndex, direction);
+        menuButtons[nextIndex]?.focus();
+        return;
+      }
+
+      if (event.key === "Enter") {
+        const target = currentIndex >= 0 ? menuButtons[currentIndex] : menuButtons[0];
+        if (!(target instanceof HTMLButtonElement)) return;
+        event.preventDefault();
+        target.click();
+        return;
+      }
+
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeFloatingMenu(root);
+        return;
+      }
     }
 
     if (event.key === "Escape") {

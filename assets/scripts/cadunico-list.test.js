@@ -1,6 +1,10 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { bootstrapCadUnicoList, nextRowIndex } from "./cadunico-list.js";
+import {
+  bootstrapCadUnicoList,
+  clampPopoverPosition,
+  nextRowIndex,
+} from "./cadunico-list.js";
 
 beforeEach(() => {
   document.body.innerHTML = "";
@@ -82,6 +86,22 @@ describe("cadunico list keyboard helpers", () => {
     expect(document.activeElement).toBe(rows[0]);
   });
 
+  it("menu navigation should consume ArrowUp/ArrowDown when row menu is open", () => {
+    mountList();
+    const rows = Array.from(document.querySelectorAll("[data-row]"));
+
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+
+    const menuButton = document.querySelector("[data-row-delete]");
+    expect(document.activeElement).toBe(menuButton);
+
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+
+    expect(document.activeElement).toBe(menuButton);
+    expect(rows[0].dataset.rowActive).toBe("true");
+  });
+
   it("bootstrapCadUnicoList should change pages with ArrowLeft and ArrowRight outside the search field", () => {
     mountList();
     const nextButton = document.querySelector("[data-page-next]");
@@ -111,6 +131,25 @@ describe("cadunico list keyboard helpers", () => {
     expect(menu.getAttribute("data-row-id")).toBe("10");
   });
 
+  it("Enter on focused menu item should open delete dialog", () => {
+    mountList();
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+
+    expect(document.querySelector("[data-delete-dialog]").open).toBe(true);
+  });
+
+  it("active row should remain the same when opening menu", () => {
+    mountList();
+    const rows = Array.from(document.querySelectorAll("[data-row]"));
+
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+
+    expect(rows[0].dataset.rowActive).toBe("true");
+  });
+
   it("bootstrapCadUnicoList should close the floating menu on Escape and restore focus", () => {
     mountList();
     const row = document.querySelector("[data-row]");
@@ -120,6 +159,29 @@ describe("cadunico list keyboard helpers", () => {
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
 
     expect(document.activeElement).toBe(row);
+    expect(document.querySelector("[data-row-menu-popover]")).toBeNull();
+  });
+
+  it("popover should clamp position inside viewport bounds", () => {
+    const result = clampPopoverPosition(
+      { top: 900, left: 1400 },
+      { width: 220, height: 120 },
+      { width: 1280, height: 720 },
+    );
+
+    expect(result.left).toBeLessThanOrEqual(1280 - 220 - 16);
+    expect(result.top).toBeLessThanOrEqual(720 - 120 - 16);
+  });
+
+  it("popover clamp should never return negative coordinates on tiny viewports", () => {
+    const result = clampPopoverPosition(
+      { top: 120, left: 280 },
+      { width: 220, height: 160 },
+      { width: 180, height: 140 },
+    );
+
+    expect(result.left).toBeGreaterThanOrEqual(16);
+    expect(result.top).toBeGreaterThanOrEqual(16);
   });
 
   it("bootstrapCadUnicoList should use the persistent delete dialog after a list swap", () => {

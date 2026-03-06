@@ -1,10 +1,15 @@
 :root {
-  --bg: #111315;
-  --bg-elevated: #171a1d;
-  --panel: #1d2125;
+  --surface-0: #111315;
+  --surface-1: #171a1d;
+  --surface-2: #1d2125;
+  --text-1: #f4eee7;
+  --text-2: #a8a29b;
+  --bg: var(--surface-0);
+  --bg-elevated: var(--surface-1);
+  --panel: var(--surface-2);
   --panel-strong: #262b30;
-  --ink: #f4eee7;
-  --muted: #a8a29b;
+  --ink: var(--text-1);
+  --muted: var(--text-2);
   --line: #373d43;
   --accent: #1d6a63;
   --accent-strong: #238178;
@@ -204,9 +209,7 @@ a {
 
 .cadunico-list-table tbody tr {
   border-top: 1px solid rgba(255, 255, 255, 0.04);
-  transition:
-    transform 160ms ease,
-    border-color 160ms ease;
+  transition: border-color 160ms ease;
 }
 
 .cadunico-list-table tbody tr:first-child {
@@ -228,13 +231,20 @@ a {
 .cadunico-list-table tbody tr:hover td:first-child,
 .cadunico-list-table tbody tr[data-row-active="true"] td:first-child {
   border-radius: 1rem 0 0 1rem;
-  padding-left: 0.65rem;
 }
 
 .cadunico-list-table tbody tr:hover td:last-child,
 .cadunico-list-table tbody tr[data-row-active="true"] td:last-child {
   border-radius: 0 1rem 1rem 0;
-  padding-right: 0.65rem;
+}
+
+.cadunico-list-table tbody tr[data-row-active="true"] td {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.cadunico-list-table tbody tr[data-row-active="true"] {
+  outline: 2px solid color-mix(in srgb, var(--focus) 55%, transparent);
+  outline-offset: -2px;
 }
 
 .cadunico-list-actions {
@@ -275,6 +285,8 @@ a {
   cursor: pointer;
   padding: 0.75rem 1rem;
   font: inherit;
+}
+
 .row-menu-popover button[aria-disabled="true"],
 .list-pagination button:disabled {
   opacity: 0.45;
@@ -337,6 +349,10 @@ a {
   display: flex;
   justify-content: flex-end;
   gap: 0.75rem;
+}
+
+.delete-dialog__actions .button--danger {
+  background: color-mix(in srgb, #b13a3a 72%, #7f2929 28%);
 }
 
 .cadunico-form {
