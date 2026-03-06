@@ -1,6 +1,10 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { bootstrapCadUnicoList, nextRowIndex } from "./cadunico-list.js";
+import {
+  bootstrapCadUnicoList,
+  clampPopoverPosition,
+  nextRowIndex,
+} from "./cadunico-list.js";
 
 beforeEach(() => {
   document.body.innerHTML = "";
@@ -136,6 +140,18 @@ describe("cadunico list keyboard helpers", () => {
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
 
     expect(document.activeElement).toBe(row);
+    expect(document.querySelector("[data-row-menu-popover]")).toBeNull();
+  });
+
+  it("popover should clamp position inside viewport bounds", () => {
+    const result = clampPopoverPosition(
+      { top: 900, left: 1400 },
+      { width: 220, height: 120 },
+      { width: 1280, height: 720 },
+    );
+
+    expect(result.left).toBeLessThanOrEqual(1280 - 220 - 16);
+    expect(result.top).toBeLessThanOrEqual(720 - 120 - 16);
   });
 
   it("bootstrapCadUnicoList should use the persistent delete dialog after a list swap", () => {

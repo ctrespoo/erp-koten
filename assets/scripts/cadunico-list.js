@@ -30,6 +30,17 @@ function currentPopover(root) {
   return root.querySelector("[data-row-menu-popover]");
 }
 
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+export function clampPopoverPosition(anchor, menuRect, viewport) {
+  return {
+    top: clamp(anchor.top, 16, viewport.height - menuRect.height - 16),
+    left: clamp(anchor.left, 16, viewport.width - menuRect.width - 16),
+  };
+}
+
 function openDialog(dialog) {
   if (!(dialog instanceof HTMLDialogElement)) return;
   if (typeof dialog.showModal === "function") {
@@ -90,8 +101,13 @@ function positionPopover(menu, row) {
   if (!(anchor instanceof HTMLElement)) return;
 
   const rect = anchor.getBoundingClientRect();
-  menu.style.top = `${rect.bottom + 8}px`;
-  menu.style.left = `${Math.max(16, rect.right - 220)}px`;
+  const position = clampPopoverPosition(
+    { top: rect.bottom + 8, left: rect.right - 220 },
+    { width: 220, height: menu.offsetHeight || 120 },
+    { width: window.innerWidth, height: window.innerHeight },
+  );
+  menu.style.top = `${position.top}px`;
+  menu.style.left = `${position.left}px`;
   menu.style.minWidth = `${Math.max(180, rect.width || 180)}px`;
 }
 
