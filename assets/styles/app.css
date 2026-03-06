@@ -1,10 +1,15 @@
 :root {
-  --bg: #111315;
-  --bg-elevated: #171a1d;
-  --panel: #1d2125;
+  --surface-0: #111315;
+  --surface-1: #171a1d;
+  --surface-2: #1d2125;
+  --text-1: #f4eee7;
+  --text-2: #a8a29b;
+  --bg: var(--surface-0);
+  --bg-elevated: var(--surface-1);
+  --panel: var(--surface-2);
   --panel-strong: #262b30;
-  --ink: #f4eee7;
-  --muted: #a8a29b;
+  --ink: var(--text-1);
+  --muted: var(--text-2);
   --line: #373d43;
   --accent: #1d6a63;
   --accent-strong: #238178;

@@ -255,6 +255,43 @@ async fn get_cadunico_index_should_render_keyboard_list_shell() {
 }
 
 #[tokio::test]
+async fn get_cadunico_pages_should_expose_consistent_shell_classes() {
+    let database = test_database().await;
+    let app = build_app(AppState::new(database.pool.clone()));
+
+    let index_response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/cadunico")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    let index_body = to_bytes(index_response.into_body(), usize::MAX).await.unwrap();
+    let index_html = String::from_utf8(index_body.to_vec()).unwrap();
+
+    let create_response = app
+        .oneshot(
+            Request::builder()
+                .uri("/cadunico/criar")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    let create_body = to_bytes(create_response.into_body(), usize::MAX).await.unwrap();
+    let create_html = String::from_utf8(create_body.to_vec()).unwrap();
+
+    for html in [&index_html, &create_html] {
+        assert!(html.contains("class=\"shell shell--wide"));
+        assert!(html.contains("class=\"page-header"));
+        assert!(html.contains("class=\"shortcut-help shortcut-help--inline\""));
+    }
+}
+
+#[tokio::test]
 async fn get_cadunico_index_should_render_existing_records_on_initial_load() {
     let database = test_database().await;
     insert_cadunico(
